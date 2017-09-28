@@ -24,5 +24,6 @@ func main() {
 
 	log.Printf("Starting server at %s\n", conf.Bind)
 
+	s.Handler.(httpHandler).StartWorkers()
 	log.Fatal(s.Serve(netutil.LimitListener(l, conf.MaxClients)))
 }

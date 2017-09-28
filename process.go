@@ -126,6 +126,10 @@ func vipsTypeSupportedSave(imgtype imageType) bool {
 	return false
 }
 
+func vipsCleanup() {
+	C.vips_cleanup()
+}
+
 func round(f float64) int {
 	return int(f + .5)
 }
@@ -176,8 +180,6 @@ func processImage(data []byte, imgtype imageType, po processingOptions) ([]byte,
 	err := C.int(0)
 
 	var img *C.struct__VipsImage
-
-	defer C.vips_cleanup()
 
 	// Load the image
 	switch imgtype {

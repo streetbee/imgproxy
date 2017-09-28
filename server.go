@@ -20,12 +20,19 @@ var mimes = map[imageType]string{
 	WEBP: "image/webp",
 }
 
+type httpTask struct {
+	rw        http.ResponseWriter
+	r         *http.Request
+	done      chan struct{}
+	startTime time.Time
+}
+
 type httpHandler struct {
-	sem chan struct{}
+	tasks chan httpTask
 }
 
 func newHTTPHandler() httpHandler {
-	return httpHandler{make(chan struct{}, conf.Concurrency)}
+	return httpHandler{make(chan httpTask, conf.MaxClients)}
 }
 
 func parsePath(r *http.Request) (string, processingOptions, error) {
@@ -147,21 +154,28 @@ func checkSecret(s string) bool {
 	return strings.HasPrefix(s, "Bearer ") && subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(s, "Bearer ")), []byte(conf.Secret)) == 1
 }
 
-func (h *httpHandler) lock() {
-	h.sem <- struct{}{}
-}
-
-func (h *httpHandler) unlock() {
-	defer func() { <-h.sem }()
-}
-
 func (h httpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	task := httpTask{rw, r, make(chan struct{}, 1), time.Now()}
+	h.tasks <- task
+	<-task.done
+}
+
+func (h httpHandler) StartWorkers() {
+	for i := 0; i < conf.Concurrency; i++ {
+		go func(ch chan httpTask) {
+			defer vipsCleanup()
+
+			for {
+				task := <-ch
+				h.handleRequest(task.rw, task.r, task.startTime)
+				task.done <- struct{}{}
+			}
+		}(h.tasks)
+	}
+}
+
+func (h httpHandler) handleRequest(rw http.ResponseWriter, r *http.Request, startTime time.Time) {
 	log.Printf("GET: %s\n", r.URL.RequestURI())
-
-	h.lock()
-	defer h.unlock()
-
-	t := time.Now()
 
 	if !checkSecret(r.Header.Get("Authorization")) {
 		repondWithForbidden(rw)
@@ -191,5 +205,5 @@ func (h httpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithImage(r, rw, b, imgURL, procOpt, t)
+	respondWithImage(r, rw, b, imgURL, procOpt, startTime)
 }

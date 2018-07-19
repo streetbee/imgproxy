@@ -205,6 +205,13 @@ When imgproxy needs to cut some parts of the image, it is guided by the gravity.
 
 If set to `0`, imgproxy will not enlarge the image if it is smaller than the given size. With any other value, imgproxy will enlarge the image.
 
+#### Force orientation
+
+By default, the orientation was taken from exif. But now this parameter define process priority.
+
+`0` - orientation gets from exif.
+`1 - 9` - angle to rotate.
+
 #### Encoded URL
 
 The source URL should be encoded with URL-safe Base64. The encoded URL can be split with `/` for your needs.
@@ -217,7 +224,7 @@ Extension specifies the format of the resulting image. At the moment, imgproxy s
 
 Signature is a URL-safe Base64-encoded HMAC digest of the rest of the path including the leading `/`. Here's how it is calculated:
 
-* Take the path after the signature — `/%resizing_type/%width/%height/%gravity/%enlarge/%encoded_url.%extension`;
+* Take the path after the signature — `/%resizing_type/%width/%height/%gravity/%enlarge/force_orientation/%encoded_url.%extension`;
 * Add salt to the beginning;
 * Calculate the HMAC digest using SHA256;
 * Encode the result with URL-safe Base64.

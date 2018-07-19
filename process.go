@@ -74,6 +74,7 @@ type processingOptions struct {
 	Height  int
 	Gravity gravityType
 	Enlarge bool
+	ForceOrientation int
 	Format  imageType
 }
 
@@ -160,14 +161,19 @@ func round(f float64) int {
 	return int(f + .5)
 }
 
-func extractMeta(img *C.VipsImage) (int, int, int, bool) {
+func extractMeta(img *C.VipsImage, ForceOrientation int) (int, int, int, bool) {
 	width := int(img.Xsize)
 	height := int(img.Ysize)
 
 	angle := C.VIPS_ANGLE_D0
 	flip := false
 
-	orientation := C.vips_get_exif_orientation(img)
+	orientation := int(C.vips_get_exif_orientation(img))
+
+	if ForceOrientation != 0 {
+		orientation = ForceOrientation
+	}
+
 	if orientation >= 5 && orientation <= 8 {
 		width, height = height, width
 	}
@@ -262,7 +268,7 @@ func processImage(data []byte, imgtype imageType, po processingOptions, t *timer
 
 	t.Check()
 
-	imgWidth, imgHeight, angle, flip := extractMeta(img)
+	imgWidth, imgHeight, angle, flip := extractMeta(img, po.ForceOrientation)
 
 	// Ensure we won't crop out of bounds
 	if !po.Enlarge || po.Resize == CROP {

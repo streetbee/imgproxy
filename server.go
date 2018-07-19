@@ -38,7 +38,7 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 
-	if len(parts) < 7 {
+	if len(parts) < 8 {
 		return "", po, errors.New("Invalid path")
 	}
 
@@ -70,7 +70,11 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 
 	po.Enlarge = parts[5] != "0"
 
-	filenameParts := strings.Split(strings.Join(parts[6:], ""), ".")
+	if po.ForceOrientation, err = strconv.Atoi(parts[6]); err != nil {
+		po.ForceOrientation = 0
+	}
+
+	filenameParts := strings.Split(strings.Join(parts[7:], ""), ".")
 
 	if len(filenameParts) < 2 {
 		po.Format = imageTypes["jpg"]
